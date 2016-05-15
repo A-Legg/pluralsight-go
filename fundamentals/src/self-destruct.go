@@ -12,4 +12,4 @@ func main() {
 		}
 		fmt.Println(timer)
 		time.Sleep(1 * time.Second)
-	}
+}
