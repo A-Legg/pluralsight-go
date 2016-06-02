@@ -5,18 +5,48 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime"
+	"time"
 )
 
 func main() {
 
-	resp, _ := http.Get("http://dev.markitondemand.com/Api/v2/Quote?symbol=googl")
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	runtime.GOMAXPROCS(4)
+	start := time.Now()
 
-	quote := new(Quoteresponse)
-	xml.Unmarshal(body, &quote)
+	stockSymbols := []string{
+		"googl",
+		"msft",
+		"aapl",
+		"bbry",
+		"hpq",
+		"vz",
+		"t",
+		"tmus",
+		"s",
+	}
+	numComplete := 0
+	for _, symbol := range stockSymbols {
+		go func(symbol string) {
+			resp, _ := http.Get("http://dev.markitondemand.com/Api/v2/Quote?symbol=" + symbol)
+			defer resp.Body.Close()
+			body, _ := ioutil.ReadAll(resp.Body)
 
-	fmt.Printf("%s: %.2f", quote.Name, quote.LastPrice)
+			quote := new(Quoteresponse)
+			xml.Unmarshal(body, &quote)
+
+			fmt.Printf("%s: %.2f", quote.Name, quote.LastPrice)
+			numComplete++
+		}(symbol)
+	}
+
+	for numComplete < len(stockSymbols) {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	elapsed := time.Since(start)
+
+	fmt.Printf("Execution time: %s", elapsed)
 }
 
 type Quoteresponse struct {
